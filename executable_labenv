@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# -----------------------------------------------------------------------------
+# labenv
+#
+# Single-file workspace entrypoint.
+# - Optionally loads SSH keys configured through SSH_KEYS
+# - Lets you pick a zjsh session through gum
+# - Connects to the selected workspace/session
+# -----------------------------------------------------------------------------
+
+GUM_HEIGHT="${GUM_HEIGHT:-50}"
+GUM_PROMPT="${GUM_PROMPT:-⚡}"
+CONFIG_FILE="${LABENV_CONFIG:-$HOME/.config/labenv/config.sh}"
+SSH_KEYS=()
+
+info() {
+	printf 'info: %s\n' "$*" >&2
+}
+
+warn() {
+	printf 'warning: %s\n' "$*" >&2
+}
+
+die() {
+	printf 'error: %s\n' "$*" >&2
+	exit 1
+}
+
+require_commands() {
+	local command_name
+
+	for command_name in "$@"; do
+		command -v "$command_name" >/dev/null 2>&1 || die "required command not found: $command_name"
+	done
+}
+
+load_config() {
+	if [[ -f "$CONFIG_FILE" ]]; then
+		# shellcheck source=/dev/null
+		source "$CONFIG_FILE"
+		info "loaded config: $CONFIG_FILE"
+	else
+		info "config not found: $CONFIG_FILE"
+	fi
+}
+
+setup_ssh() {
+	local key_path
+	local permissions fingerprint
+
+	if [[ ${#SSH_KEYS[@]} -eq 0 && -z "${SSH_KEY:-}" ]]; then
+		info "SSH_KEYS is not set; continuing without loading SSH keys"
+		return 0
+	fi
+
+	if [[ ${#SSH_KEYS[@]} -eq 0 && -n "${SSH_KEY:-}" ]]; then
+		SSH_KEYS=("$SSH_KEY")
+		info "SSH_KEY is set; using it as SSH_KEYS fallback"
+	fi
+
+	require_commands ssh-agent ssh-add ssh-keygen
+	info "SSH_KEYS configured: ${#SSH_KEYS[@]}"
+
+	if [[ -z "${SSH_AUTH_SOCK:-}" ]] || ! ssh-add -l >/dev/null 2>&1; then
+		eval "$(ssh-agent -s)" >/dev/null
+		info "started ssh-agent: ${SSH_AGENT_PID:-unknown}"
+	fi
+
+	for key_path in "${SSH_KEYS[@]}"; do
+		if [[ ! -f "$key_path" ]]; then
+			warn "SSH key not found: $key_path"
+			continue
+		fi
+
+		permissions="$(stat -c '%a' "$key_path" 2>/dev/null || true)"
+		case "$permissions" in
+			400|600) ;;
+			"") warn "could not check permissions for SSH key: $key_path" ;;
+			*) warn "SSH key permissions look loose: $key_path ($permissions). Recommended: chmod 600 '$key_path'" ;;
+		esac
+
+		fingerprint="$(ssh-keygen -lf "$key_path" 2>/dev/null | awk '{ print $2 }')"
+		if [[ -n "$fingerprint" ]] && ssh-add -l 2>/dev/null | grep -Fq "$fingerprint"; then
+			info "SSH key already loaded: $key_path"
+			continue
+		fi
+
+		ssh-add "$key_path"
+		info "loaded SSH key: $key_path"
+	done
+}
+
+main() {
+	local session
+
+	require_commands zjsh gum
+	load_config
+	setup_ssh
+
+	session="$(
+		zjsh list -i \
+			| gum filter \
+				--limit 1 \
+				--no-sort \
+				--fuzzy \
+				--placeholder 'Pick a project' \
+				--height "$GUM_HEIGHT" \
+				--prompt "$GUM_PROMPT"
+	)"
+
+	[[ -n "$session" ]] || return 0
+	zjsh connect "$session"
+}
+
+main "$@"
