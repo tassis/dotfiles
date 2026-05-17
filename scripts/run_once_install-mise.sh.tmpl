@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+need() { command -v "$1" >/dev/null 2>&1; }
+
+install_mise_via_curl() {
+  local install_path
+  install_path="${MISE_INSTALL_PATH:-$HOME/.local/bin/mise}"
+
+  mkdir -p "$(dirname "$install_path")"
+
+  curl -fsSL https://mise.run | MISE_INSTALL_PATH="$install_path" sh
+}
+
+ensure_curl_linux() {
+  if need curl; then
+    return 0
+  fi
+
+  if need apt-get; then
+    sudo apt-get update
+    sudo apt-get install -y curl
+  elif need dnf; then
+    sudo dnf install -y curl
+  elif need pacman; then
+    sudo pacman -Syu --noconfirm curl
+  elif need apk; then
+    sudo apk add --no-cache curl
+  else
+    echo "curl not found and no supported package manager found." >&2
+    exit 1
+  fi
+}
+
+main() {
+  if need mise || [ -x "$HOME/.local/bin/mise" ]; then
+    exit 0
+  fi
+
+  case "$(uname -s)" in
+    Darwin)
+      if need brew; then
+        brew install mise
+      else
+        if ! need curl; then
+          echo "curl not found. Install curl (or Homebrew) first." >&2
+          exit 1
+        fi
+        install_mise_via_curl
+      fi
+      ;;
+    Linux)
+      ensure_curl_linux
+      install_mise_via_curl
+      ;;
+    *)
+      echo "Unsupported OS: $(uname -s)" >&2
+      exit 1
+      ;;
+  esac
+
+  if need mise; then
+    mise --version >/dev/null
+  elif [ -x "$HOME/.local/bin/mise" ]; then
+    "$HOME/.local/bin/mise" --version >/dev/null
+  fi
+}
+
+main "$@"
