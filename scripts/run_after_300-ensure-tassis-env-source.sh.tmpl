@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+state_file() {
+  local state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+  printf '%s\n' "$state_home/tassis/ensure-env-source.done"
+}
+
+ensure_source_block() {
+  local rc_file="$1"
+
+  mkdir -p "$(dirname "$rc_file")"
+  touch "$rc_file"
+
+  if grep -Fq '# >>> tassis env >>>' -- "$rc_file"; then
+    return 0
+  fi
+
+  {
+    printf '\n'
+    printf '# >>> tassis env >>>\n'
+    printf 'if [ -f "$HOME/.config/tassis/env.sh" ]; then\n'
+    printf '  . "$HOME/.config/tassis/env.sh"\n'
+    printf 'fi\n'
+    printf '# <<< tassis env <<<\n'
+  } >> "$rc_file"
+}
+
+main() {
+  local done_file
+
+  done_file="$(state_file)"
+
+  if [ -f "$done_file" ]; then
+    exit 0
+  fi
+
+  ensure_source_block "$HOME/.zshrc"
+
+  # Only patch bashrc if it already exists.
+  # This avoids creating ~/.bashrc on machines that do not use bash interactively.
+  if [ -f "$HOME/.bashrc" ]; then
+    ensure_source_block "$HOME/.bashrc"
+  fi
+
+  mkdir -p "$(dirname "$done_file")"
+  touch "$done_file"
+}
+
+main "$@"

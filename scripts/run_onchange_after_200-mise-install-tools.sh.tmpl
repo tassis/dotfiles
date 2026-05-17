@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Re-run this script when mise config changes.
+# mise config checksum: {{ include "dot_config/mise/config.toml" | sha256sum }}
+
+mise_bin() {
+  if command -v mise >/dev/null 2>&1; then
+    command -v mise
+  elif [ -x "$HOME/.local/bin/mise" ]; then
+    printf '%s\n' "$HOME/.local/bin/mise"
+  else
+    return 1
+  fi
+}
+
+main() {
+  local mise
+
+  if ! mise="$(mise_bin)"; then
+    printf '%s\n' "mise not found; skip mise install" >&2
+    exit 0
+  fi
+
+  "$mise" install --yes
+}
+
+main "$@"

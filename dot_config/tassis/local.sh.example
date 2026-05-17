@@ -1,0 +1,4 @@
+# Copy this file to ~/.config/tassis/local.sh for machine-specific settings.
+
+# export WORKSPACE="$HOME/work"
+# alias cdp='cd "$WORKSPACE"'

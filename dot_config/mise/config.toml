@@ -1,0 +1,14 @@
+[tools]
+go = "1.25"
+rust = "stable"
+node = "24"
+bun = "latest"
+
+# CLI Tools
+ripgrep = "latest"
+fd = "latest"
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+zoxide = "latest"
+zellij = "latest"
