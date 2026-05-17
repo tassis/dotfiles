@@ -93,12 +93,20 @@ setup_ssh() {
 	done
 }
 
+ensure_not_in_zellij() {
+	if [[ -n "${ZELLIJ:-}" || -n "${ZELLIJ_SESSION_NAME:-}" ]]; then
+		warn "already inside Zellij session${ZELLIJ_SESSION_NAME:+: $ZELLIJ_SESSION_NAME}; skip launching zjsh"
+		exit 0
+	fi
+}
+
 main() {
 	local session
 
 	require_commands zjsh gum
 	load_config
 	setup_ssh
+	ensure_not_in_zellij
 
 	session="$(
 		zjsh list -i \
