@@ -27,11 +27,13 @@ layout {
         }
     }
 
-    tab name="editor" {
-        pane stacked=true {
-            pane name="neovim" command="neovim" focus=true
-            pane name="terminal" command="zsh"
+    tab name="main" {
+        pane split_direction="vertical" {
+            pane size="50%" command="zsh"
+            pane split_direction="horizontal" {
+                pane size="50%"
+                pane
+            }
         }
     }
-
 }
