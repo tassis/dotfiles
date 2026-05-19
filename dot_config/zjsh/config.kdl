@@ -1,0 +1,27 @@
+defaults {
+  shell "sh"
+  restart_on_resurrection false
+  icon_project "◆"
+  icon_session "●"
+  icon_resurrectable "↺"
+  icon_path "→"
+}
+
+project "scratch" {
+  layout "editor"
+  cwd true
+  restart_on_resurrection true
+}
+
+project "config-zjsh" {
+  path "~/.config/zjsh"
+  layout "editor"
+  restart_on_resurrection true
+}
+
+project "config-nvim" {
+  path "~/.config/nvim"
+  layout "editor"
+  restart_on_resurrection true
+}
+
