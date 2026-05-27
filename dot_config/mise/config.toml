@@ -1,5 +1,5 @@
 [tools]
-go = "1.25"
+go = "1.26"
 rust = "stable"
 node = "24"
 bun = "latest"
@@ -18,3 +18,4 @@ gum = "latest"
 "github:tassis/zjsh" = "latest"
 resvg = "latest"
 yazi = "latest"
+just = "latest"
